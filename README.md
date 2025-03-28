@@ -1,122 +1,110 @@
-# Lib Mem Dmabuf
+# LIB MEM DMABUF
 
 ## Overview
 
-lib_mem_dmabuf is a library for access and interact with Linux DMA buffer.
+`lib_mem_dmabuf` is a userspace library package for interacting with Linux DMA buffers. It provides C++ APIs and Ament CMake build integration, making it easy to use in ROS 2 projects.
 
-### Features
+**Feature Highlights**
 
-* Alloc and destroy DMA buffer
-* Return file descriptor (fd) associated with DMA buffer
-* DMA buffer synchronization operation
-* Auto release DMA buffer and fd when leave code scope
-* Register DMA buffer release callback
+* Underlying file descriptor (fd) import and access.
+* Flexible buffer management with automatic or manual release.
+* Support for buffer release callback registration.
 
-## Getting Started
+> [!NOTE]
+> Prerequisites: Linux kernel version 5.12 or later is required for kernel dma-buf support.
 
-### Prerequisites
+## Quickstart
 
-- Linux kernel version 5.12 and later, for kernel dma-buf support.
+### Build
 
-<details><summary>Cross Compile with QCLINUX SDK</summary>
-
-### Cross Compile with QCLINUX SDK
-
-Setup QCLINUX SDK environments:
-- Reference [QRB ROS Documents: Getting Started](https://quic-qrb-ros.github.io/getting_started/environment_setup.html)
-
-Create workspace in QCLINUX SDK environment and clone source code
+This package uses the Ament CMake build system for easy integration into ROS 2 projects.
 
 ```bash
-mkdir -p <qirp_decompressed_workspace>/qirp-sdk/ros_ws
-cd <qirp_decompressed_workspace>/qirp-sdk/ros_ws
-
 git clone https://github.com/quic-qrb-ros/lib_mem_dmabuf.git
-```
-
-Build source code with QCLINUX SDK
-
-```bash
-export AMENT_PREFIX_PATH="${OECORE_TARGET_SYSROOT}/usr;${OECORE_NATIVE_SYSROOT}/usr"
-export PYTHONPATH=${PYTHONPATH}:${OECORE_TARGET_SYSROOT}/usr/lib/python3.10/site-packages
-
-colcon build --merge-install --cmake-args \
-  -DPython3_ROOT_DIR=${OECORE_TARGET_SYSROOT}/usr \
-  -DPython3_NumPy_INCLUDE_DIR=${OECORE_TARGET_SYSROOT}/usr/lib/python3.10/site-packages/numpy/core/include \
-  -DPYTHON_SOABI=cpython-310-aarch64-linux-gnu -DCMAKE_STAGING_PREFIX=$(pwd)/install \
-  -DCMAKE_PREFIX_PATH=$(pwd)/install/share \
-  -DBUILD_TESTING=OFF
-```
-
-</details>
-
-<details open><summary>Native Build on Ubuntu</summary>
-
-### Native Build on Ubuntu
-
-Prerequisites
-
-- ROS 2, this package built with ROS 2 build tools: [Install ROS2 on Ubuntu](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)
-
-Create workspace and clone source code from GitHub:
-
-```bash
-mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
-git clone https://github.com/quic-qrb-ros/lib_mem_dmabuf.git
-```
-Build source code
-
-```bash
-cd ~/ros2_ws
-source /opt/ros/${ROS_DISTRO}/setup.bash
 colcon build
 ```
 
+For the Qualcomm QCLinux platform, we provide two ways to build this package.
+
+<details>
+<summary>On-Device Compilation with Docker</summary>
+
+1. Set up the QCLinux Docker environment following the [QRB ROS Docker Setup](https://github.com/quic-qrb-ros/qrb_ros_docker?tab=readme-ov-file#quickstart).
+
+2. Clone and build the source code:
+
+    ```bash
+    cd /home/qrb_ros_ws/src/qrb_ros_docker/scripts && \
+    bash docker_run.sh
+
+    git clone https://github.com/quic-qrb-ros/lib_mem_dmabuf.git
+    colcon build
+    ```
+
 </details>
 
-### Use `lib_mem_dmabuf` in your project
+<details><summary>Cross Compilation with QIRP SDK</summary>
 
-Add dependencies in your package.xml
+1. Set up the QIRP SDK environment: Refer to [QRB ROS Documents: Getting Started](https://quic-qrb-ros.github.io/getting_started/environment_setup.html)
+
+2. Create a workspace and clone the source code:
+
+    ```bash
+    mkdir -p <qirp_decompressed_workspace>/qirp-sdk/ros_ws
+    cd <qirp_decompressed_workspace>/qirp-sdk/ros_ws
+
+    git clone https://github.com/quic-qrb-ros/lib_mem_dmabuf.git
+    ```
+
+3. Build the source code with QIRP SDK:
+
+    ```bash
+    colcon build --merge-install --cmake-args \
+      -DCMAKE_TOOLCHAIN_FILE=${OE_CMAKE_TOOLCHAIN_FILE} \
+      -DPYTHON_EXECUTABLE=${OECORE_NATIVE_SYSROOT}/usr/bin/python3 \
+      -DPython3_NumPy_INCLUDE_DIR=${OECORE_NATIVE_SYSROOT}/usr/lib/python3.12/site-packages/numpy/core/include \
+      -DPYTHON_SOABI=cpython-312-aarch64-linux-gnu \
+      -DCMAKE_MAKE_PROGRAM=/usr/bin/make \
+      -DBUILD_TESTING=OFF
+    ```
+
+</details>
+
+### Usage
+
+This section shows how to use `lib_mem_dmabuf` to interact with Linux DMA buffers in your projects.
+
+Add dependencies in your `package.xml`:
 
 ```xml
 <depend>lib_mem_dmabuf</depend>
 ```
 
-Find dependencies in your CMakeLists.txt
+Configure dependencies in your `CMakeLists.txt`:
 
 ```cmake
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 ```
 
-Alloc DMA buffer with provided APIs
+Allocate a DMA buffer with C++ APIs:
 
 ```c++
 #include "lib_mem_dmabuf/dmabuf.hpp"
 
-// alloc dmabuf with size and DMA heap name
-auto buf = lib_mem_dmabuf::DmaBuffer::alloc(size, "/dev/dma_heap/system");
+// Allocate dmabuf with size and DMA heap name
+auto buf = lib_mem_dmabuf::DmaBuffer::alloc(1024, "/dev/dma_heap/system");
 
-// get fd of buffer
+// Get fd of buffer
 std::cout << "fd: " << buf->fd() << std::endl;
 
-// get CPU accessable address
+// Get CPU accessible address
 if (buf->map()) {
-   std::cout << "CPU address: " << buf->addr() << std::endl;
-   // read / write buffer
-   // ...
+    std::cout << "CPU address: " << buf->addr() << std::endl;
 }
 
-// fd will auto close when buf leave scope
+// fd will auto close when buf leaves scope
 ```
-
-## Supported Platforms
-
-This package is designed and tested to be compatible with ROS 2 Humble running on Qualcomm RB3 gen2.
-
-| Hardware                                                     | Software          |
-| ------------------------------------------------------------ | ----------------- |
-| [Qualcomm RB3 gen2](https://www.qualcomm.com/developer/hardware/rb3-gen-2-development-kit) | `LE.QCROBOTICS.1.0`, `Canonical Ubuntu Image for RB3 gen2` |
 
 ## Contributing
 
@@ -133,4 +121,4 @@ See also the list of [contributors](https://github.com/your/project/contributors
 
 ## License
 
-Project is licensed under the [BSD-3-clause License](https://spdx.org/licenses/BSD-3-Clause.html). See [LICENSE](./LICENSE) for the full license text.
+Project is licensed under the [BSD-3-Clause License](https://spdx.org/licenses/BSD-3-Clause.html). See [LICENSE](./LICENSE) for the full license text.
