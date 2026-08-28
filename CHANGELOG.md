@@ -1,5 +1,12 @@
 # Changelog for package lib_mem_dmabuf
 
+## 1.1.3 (2026-08-28)
+
+- docs: remove RB3 Gen2 references from README
+- ci: delegate preflight checks to qrb_ros_gh_actions reusable workflow
+- fix: replace pull_request_target with pull_request
+- Contributors: Peng Wang
+
 ## 1.1.2 (2026-05-25)
 
 - fix: remove unit test which depends on platform
